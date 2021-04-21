@@ -1,0 +1,104 @@
+---
+title: "Regression"
+author: "Tarun"
+date: "4/21/2021"
+output: html_document
+---
+## Overview
+
+Our goal here to explore the relationship between the variables of the "mtcars" dataset. Our research will focus on exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). We are particularly interested in the following two questions:
+
+1. “Is an automatic or manual transmission better for MPG?”
+2. “Quantify the MPG difference between automatic and manual transmissions.”
+I am going to use the following R libraries to assist in my analysis:
+
+
+```{r,echo=T}
+require(datasets)
+require(ggplot2)
+require(GGally)
+require(ggthemes)
+require(plotly)
+require(dplyr)
+require(ggcorrplot)
+require(Amelia)
+require(leaps)
+cars <- mtcars
+head(cars)
+missmap(cars) # to check the missing values
+```
+
+There is no missing values in the dataset but, we need to change some of the varible types. 
+
+
+## Data Processing
+
+```{r,echo=TRUE}
+cars$cyl <- as.factor(cars$cyl)
+cars$vs <- as.factor(cars$vs)
+cars$am <- as.factor(cars$am)
+str(cars)
+```
+
+## Exploratory Analysis 
+
+```{r,echo=TRUE}
+ # To check the correlation b/w the variables 
+plot1 <- ggplotly(ggcorr(mtcars, nbreaks = 4, palette = "RdGy"))
+plot1
+
+plot2 <- ggplot(cars, aes(mpg)) + 
+  geom_histogram(aes(fill=am),binwidth = 5) +facet_grid(.~am)+
+  labs(title = "Histogram of Miles per Gallon",
+       x='"Transmission Type: 0 = Automatic ; 1 
+       = Manual"', y = "Frequency") 
+   
+ggplotly(plot2)
+
+
+
+plot3 <- ggplot(data = cars, aes(x = am, y = mpg)) +
+  geom_boxplot(aes(fill=factor(cyl))) +
+  labs(x='"Transmission Type: 0 = Automatic ; 1 
+       = Manual"',y="Miles per Gallon",
+       title='MPG by Transmission Type')
+ggplotly(plot3)
+aggregate(mpg ~ am, data = mtcars, mean)
+```
+
+Correlation Analysis - As we can see in the correlation graph, that "Miles per Gallon"  have - correlation with cyl, hp, and wt. That means car mileage will decrease as car weight and horsepower increase.
+
+Histogram Analysis - Manual transmission cars have higher MPG than automatic transmission.
+
+Boxplot Analysis - Manual transmission is 7.25 MPG higher than automatic transmission.
+
+
+## Regression modelling
+
+Here I will use the Best Subset Regression method to check which variable affects the mpg more.
+To run the regression with the best subset selection, we will use the regsubsets function from the package leaps
+
+```{r,echo=T}
+fit <- regsubsets(mpg~., cars, nvmax = 11)
+# nvmax is the maximum number of predictors to be included in the model by default it is set to 8
+sum <- summary(fit)
+#to assess the goodness-of-fit we will use the adjusted R square
+# because it is automatically computed for each model
+
+sum$adjr2
+which.max(sum$adjr2)# find the model with maximum adjusted R squared
+coef(fit, 5) # To print the coefficients of this model
+
+
+model <- lm(mpg~ cyl+hp+wt+vs+am, data=cars)# Now applying the regression model on best fit coefficients
+summary(model)
+```
+The results suggest that the best model includes cyl6, cyl8, hp, wt, and manual variables. This model explains about 86.59% of the variance. Cylinders change negatively with mpg (-3.03miles and -2.16miles for cyl6 and cyl8, respectively), so do with horsepower (-0.03miles) and weight (-2.5miles for every 1,000lb). On the other hand, the manual transmission is 1.81mpg better than the automatic transmission.
+
+
+
+## Conclusion
+
+On average, the manual transmission is better than the automatic transmission by 1.81mpg. However, transmission type is not the only factor accounting for MPG; cylinders, horsepower, and weight are the important factors affecting the MPG.
+
+
